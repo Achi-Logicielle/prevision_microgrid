@@ -41,7 +41,7 @@ const start = async () => {
         origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       });
-    await app.listen({ port: 3001 });
+    await app.listen({ port: 3005 });
     const address = app.server.address();
     if (typeof address === 'string') {
         app.log.info(`Server listening on ${address}`);

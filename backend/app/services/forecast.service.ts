@@ -1,10 +1,12 @@
 import { Forecast, IForecast, ForecastInput } from '../models/forcast.model';
 import redis from '../utils/redis';
+import mqttService from './mqtt.service';
 
 export class ForecastService {
     // Create a new forecast
     static async createForecast(forecastData: ForecastInput): Promise<IForecast> {
         const forecast = new Forecast(forecastData);
+        
         return await forecast.save();
     }
 
@@ -20,7 +22,10 @@ static async generatePrediction(data_type: string, historical_data: number[], ho
     const cached = await redis.get(cacheKey);
     if (cached) {
         console.log('📦 Cache HIT');
-        return { forecast: JSON.parse(cached), fromCache: true };
+        const forecast = JSON.parse(cached);
+        // Publish cached forecast to MQTT
+        await mqttService.publishForecast(forecast);
+        return { forecast, fromCache: true };
     }
 
     // Dummy prediction logic
@@ -37,6 +42,9 @@ static async generatePrediction(data_type: string, historical_data: number[], ho
     });
 
     await redis.set(cacheKey, JSON.stringify(forecast), 'EX', 300); // expires in 5 minutes
+
+    // Publish new forecast to MQTT
+    await mqttService.publishForecast(forecast);
 
     console.log('🧠 Cache MISS – computed and stored');
     return { forecast, fromCache: false };
